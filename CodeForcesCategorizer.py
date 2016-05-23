@@ -26,7 +26,19 @@ def insert(codeForces):
 
 #def userAuth():
 
+#updates the db
+def update(problems):
+    conn=sqlite3.connect('codeForces.db')
+    print("Attempting to update...")
+    for prob in problems:
+        #print(prob)
+        conn.execute("UPDATE CODEFORCES SET STATUS = ? WHERE PROBLEM=?",(1,prob))
+    conn.commit()
+    print("Record updated successfully!")
+    conn.close()
+#checks user submission for the problems they've solved
 def accepted(name):
+    acceptedProblem=[]
     linkAdd="/page/1"
     link = "http://www.codeforces.com"
     linkTemp = "http://www.codeforces.com/submissions/"+name+linkAdd
@@ -45,18 +57,20 @@ def accepted(name):
     soup = bs(page.read(),"html.parser")
     linkAdd=soup.find_all('a', href=True, text="→")[0]['href']
     print(linkAdd)
+
     while(len(linkAdd)!=0):
         table = soup.find('table',{'class': 'status-frame-datatable'})
-        print(table)
+        #print(table)
         if table:
-            rows = table.find_all('tr')
-            print(rows)
-
-
-
-
-
-
+            problem = table.find_all('a', href=re.compile('/problemset/problem/\d+/\w+'))
+            status = table.find_all('span')
+            #print(status )
+            status = [status[x].text for x in range(0,len(status))]
+            problem =[problem[x].text.split() for x in range(0,len(problem))]
+        for i in range (0,len(problem)):
+            if(status[i]=="Accepted"):
+                #print(problem[i])
+                acceptedProblem.append((problem[i][0]))
         linkTemp = link+linkAdd
         soup =bs(urlopen(link+linkAdd).read(), "html.parser")
         submission=soup.find_all('a', href=True, text="→")
@@ -66,13 +80,17 @@ def accepted(name):
             print("Reached the end")
             break
 
+    return set(acceptedProblem)
+
 def setUp():
     #final list to keep track of all the data before insertion
     codeForces = []
     problemTypeSet = set()
     #check if database exists
     if(os.path.isfile('codeForces.db')):
+        print("Connecting to database...")
         conn = sqlite3.connect('codeForces.db')
+        #return
     else:
         conn = sqlite3.connect('codeForces.db')
         conn.execute('''CREATE TABLE CODEFORCES (
@@ -125,11 +143,16 @@ def setUp():
         except IndexError:
             print("Reached the end")
             break
-    print(codeForces)
-    insert(codeForces)
+    #print(problemTypeSet)
+    #print(codeForces)
+    #insert(codeForces)
     conn.close()
-
+    return problemTypeSet
+"""
 def main():
+    setUp()
     handle = input("Enter handle name: ")
-    accepted(handle)
+    acceptedProblem=accepted(handle)
+    update(acceptedProblem)
 main()
+"""
